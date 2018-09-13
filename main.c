@@ -2,7 +2,10 @@
 
 #include "aes.h"
 
-int main() {
+int main(int argc, char** argv) {
 	printf("Hello, AES!\n");
+	
+	handleArgs(argc, argv);
+	
 	return 0;
 }
