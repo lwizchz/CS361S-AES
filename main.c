@@ -3,9 +3,9 @@
 #include "aes.h"
 
 int main(int argc, char** argv) {
-	printf("Hello, AES!\n");
-	
-	handleArgs(argc, argv);
-	
-	return 0;
+    printf("Hello, AES!\n");
+
+    handleArgs(argc, argv);
+
+    return 0;
 }

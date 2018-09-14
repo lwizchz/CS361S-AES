@@ -8,25 +8,25 @@
 #define NUM_ROUNDS_256 14 // Nr for 256bit
 
 typedef enum {
-	KEYSIZE_128,
-	KEYSIZE_256
+    KEYSIZE_128,
+    KEYSIZE_256
 } E_KEYSIZE;
 typedef enum  {
-	MODE_ENCRYPT,
-	MODE_DECRYPT
+    MODE_ENCRYPT,
+    MODE_DECRYPT
 } E_MODE;
 
 typedef struct {
-	E_KEYSIZE keysize;
-	E_MODE mode;
-	
-	const char* keyfile;
-	const char* inputfile;
-	const char* outputfile;
+    E_KEYSIZE keysize;
+    E_MODE mode;
+
+    const char* keyfile;
+    const char* inputfile;
+    const char* outputfile;
 } Options;
 
 typedef struct {
-	unsigned char byte[4][NUM_COL];
+    unsigned char byte[4][NUM_COL];
 } State;
 
 Options handleArgs(int, char**);

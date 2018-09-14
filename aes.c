@@ -1,10 +1,21 @@
 #ifndef AES_C
 #define AES_C 1
 
+#include <unistd.h>
+
 #include "aes.h"
 
+/*const struct option long_opts[] = {
+    {"keysize", required_argument, NULL, '\0'},
+    {"keyfile", required_argument, NULL, '\0'},
+    {"inputfile", required_argument, NULL, '\0'},
+    {"outputfile", required_argument, NULL, '\0'},
+    {"mode", required_argument, NULL, '\0'},
+    {NULL, 0, NULL, 0}
+};*/
+
 Options handleArgs(int arg, char** argv) {
-	Options opt;
+    Options opt;
 	return opt;
 }
 
