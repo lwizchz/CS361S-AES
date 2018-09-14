@@ -20,9 +20,9 @@ typedef struct {
     E_KEYSIZE keysize;
     E_MODE mode;
 
-    const char* keyfile;
-    const char* inputfile;
-    const char* outputfile;
+    char* keyfile;
+    char* inputfile;
+    char* outputfile;
 } Options;
 
 typedef struct {
