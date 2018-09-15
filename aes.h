@@ -30,7 +30,12 @@ typedef struct {
 } State;
 
 Options handleArgs(int, char**);
+
 size_t writeStates(const char*, State**);
+
+State** readStates(char* filename);
+long int findSize(char* file_name); 
+void printStates(State** state_array_ptr);
 
 void subBytes(State*);
 void shiftRows(State*);

@@ -2,9 +2,9 @@
 
 keysize="128"
 mode="encrypt"
-key="tests/key0"
-inputfile="tests/plaintext0"
-outputfile="tests/ciphertext0"
+key="tests/key1"
+inputfile="tests/plaintext1"
+outputfile="tests/ciphertext1"
 
 cmd="./aes --keysize $keysize --mode $mode --keyfile $key --inputfile $inputfile --outputfile $outputfile"
 echo $cmd
