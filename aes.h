@@ -7,6 +7,8 @@
 #define NUM_ROUNDS_128 10 // Nr for 128bit
 #define NUM_ROUNDS_256 14 // Nr for 256bit
 
+#define BLOCK_SIZE 16
+
 typedef enum {
     KEYSIZE_128,
     KEYSIZE_256
