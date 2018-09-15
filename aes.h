@@ -33,11 +33,11 @@ typedef struct {
 
 Options handleArgs(int, char**);
 
-size_t writeStates(const char*, State**);
-
 State** readStates(char* filename);
 long int findSize(char* file_name); 
 void printStates(State** state_array_ptr);
+
+size_t writeStates(const char*, State**);
 
 void subBytes(State*);
 void shiftRows(State*);

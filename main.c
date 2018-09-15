@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
 
     State** state_array = readStates(opt.inputfile);
 
+    writeStates(opt.outputfile, state_array);
+
     return 0;
 }
-
-

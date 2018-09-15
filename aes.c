@@ -165,28 +165,6 @@ Options handleArgs(int argc, char** argv) {
     return opt;
 }
 
-size_t writeStates(const char* filename, State** state_array) {
-    FILE* fh = fopen(filename, "wb");
-    if (fh == NULL) {
-        exitError("Error opening output file\n");
-    }
-
-    State* state = *state_array;
-    size_t bytes = 0;
-    while (state) {
-        for (int c=0; c<4; c++) {
-            for (int r=0; r<4; r++) {
-                bytes += fwrite(&state->byte[r][c], sizeof(char), 1, fh);
-            }
-        }
-        state = *(++state_array);
-    }
-
-    fclose(fh);
-
-    return bytes;
-}
-
 State** readStates(char* filename) {
     // find size of file and check if it exists
     size_t file_size_bytes = findSize(filename);
@@ -261,6 +239,28 @@ void printStates(State** state_array) {
         printf("\n");
         state_array++;
     }
+}
+
+size_t writeStates(const char* filename, State** state_array) {
+    FILE* fh = fopen(filename, "wb");
+    if (fh == NULL) {
+        exitError("Error opening output file\n");
+    }
+
+    State* state = *state_array;
+    size_t bytes = 0;
+    while (state) {
+        for (int c=0; c<4; c++) {
+            for (int r=0; r<4; r++) {
+                bytes += fwrite(&state->byte[r][c], sizeof(char), 1, fh);
+            }
+        }
+        state = *(++state_array);
+    }
+
+    fclose(fh);
+
+    return bytes;
 }
 
 void subBytes(State* state) {}
