@@ -30,6 +30,7 @@ typedef struct {
 } State;
 
 Options handleArgs(int, char**);
+size_t writeStates(const char*, State**);
 
 void subBytes(State*);
 void shiftRows(State*);
@@ -42,5 +43,8 @@ void addRoundKey(State*);
 void invSubBytes(State*);
 void invShiftRows(State*);
 void invMixColumns(State*);
+
+void encrypt(E_KEYSIZE, State**);
+void decrypt(E_KEYSIZE, State**);
 
 #endif
