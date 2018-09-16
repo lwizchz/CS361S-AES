@@ -206,6 +206,22 @@ State** readStates(char* filename) {
 
     printf("State array pointer location: %p\n", (void*) state_array);
     printf("File Size: %ld\n", findSize(filename));
+
+    //Testing subBytes()
+    printf("*****EXECUTING subBytes()*****\n");
+    for (int a = 0; a < arrays_needed; a++){
+        subBytes(state_array[a]);
+    }
+    printf("*****FINISHED EXECUTING subBytes()*****\n\n");
+    printStates(state_array);
+
+    //Testing shiftRows()
+    printf("*****EXECUTING shiftRows()*****\n");
+    for (int a = 0; a < arrays_needed; a++){
+        shiftRows(state_array[a]);
+    }
+    printf("*****FINISHED EXECUTING shiftRows()*****\n");
+    printStates(state_array);
     return state_array;
 }
 //Function findSize() taken from https://www.geeksforgeeks.org/c-program-find-size-file/
@@ -263,8 +279,43 @@ size_t writeStates(const char* filename, State** state_array) {
     return bytes;
 }
 
-void subBytes(State* state) {}
-void shiftRows(State* state) {}
+void subBytes(State* state) {
+    for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+            char sbox_col_idx = (state->byte[r][c] & 0x0f);
+            char sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
+            state->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
+        }
+    }
+}
+// All row shifts are left and cyclical
+void shiftRows(State* state) {
+    // Do nothing to Row 0
+
+    // Shift Row 1 by 1
+    char s1_0 = state->byte[1][0];
+    for (int c = 0; c < 3; c++) {
+        state->byte[1][c] = state->byte[1][c + 1];
+    }
+    state->byte[1][3] = s1_0;
+
+    // Shift Row 2 by 2
+    char s2_0 = state->byte[2][0];
+    char s2_1 = state->byte[2][1];
+    state->byte[2][0] = state->byte[2][2];
+    state->byte[2][1] = state->byte[2][3];
+    state->byte[2][2] = s2_0;
+    state->byte[2][3] = s2_1;
+
+    // Shift Row 3 by 3
+    char s3_0 = state->byte[3][0];
+    char s3_1 = state->byte[3][1];
+    char s3_2 = state->byte[3][2];
+    state->byte[3][0] = state->byte[3][3];
+    state->byte[3][1] = s3_0;
+    state->byte[3][2] = s3_1;
+    state->byte[3][3] = s3_2;
+}
 void mixColumns(State* state) {}
 void addRoundKey(State* state) {}
 
