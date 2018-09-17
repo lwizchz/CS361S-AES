@@ -169,7 +169,7 @@ State** readStates(char* filename) {
     // find size of file and check if it exists
     size_t file_size_bytes = findSize(filename);
     // determine how many state arrays are needed
-    int arrays_needed = ceil((double) file_size_bytes / BLOCK_SIZE);
+    int arrays_needed = floor((double) file_size_bytes / BLOCK_SIZE) + 1;
 
     State** state_array = malloc(sizeof(State*) * (arrays_needed + 1));
     state_array[arrays_needed] = NULL; // Set sentinel value
@@ -200,6 +200,10 @@ State** readStates(char* filename) {
     if (rem != 0) {
         printf("remainder not 0\n");
         state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE - rem;
+    }
+    else {
+        printf("remainder is 0\n");
+        state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE;
     }
 
     printStates(state_array);
