@@ -364,9 +364,9 @@ void keyExpansion(Key rawKey, E_KEYSIZE keysize) {
     while (i < NUM_COL*(numRounds+1)) {
         copyWord(temp, schedule[i-1]);
         if (i % keysize = 0) {
-            // copyWord(temp, subWord(rotWord(temp)) ^ Rcon[i/keysize])
+            copyWord(temp, subWord(rotWord(temp)) ^ rcon(i/keysize));
         } else if (keysize > 6 && i % keysize = 4) {
-            // magic
+            copyWord(temp, subWord(temp));
         }
         schedule[i] = schedule[i-keysize] ^ temp;
         i = i+1;
@@ -428,6 +428,16 @@ Word* subWord(Word* word) {
         word->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
     }
     return word;
+}
+
+unsigned char rcon(int i) {
+    assert(i != 0);
+    assert(!(i > 10));
+    unsigned char Rcon[10] = {
+    //  1       2       3       4       5       6       7       8       9       10
+        0x01,   0x02,   0x04,   0x08,   0x10,   0x20,   0x40,   0x80,   0x1b,   0x36
+    };
+    return Rcon[i-1];
 }
 
 void invSubBytes(State* state) {}
