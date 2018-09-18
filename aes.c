@@ -383,7 +383,21 @@ void addRoundKey(State* state) {}
 
 void invSubBytes(State* state) {}
 void invShiftRows(State* state) {}
-void invMixColumns(State* state) {}
+void invMixColumns(State* state) {
+    for (int c=0; c<NUM_COL; c++) {
+        // Store bytes for computation
+        const unsigned char s0 = state->byte[0][c];
+        const unsigned char s1 = state->byte[1][c];
+        const unsigned char s2 = state->byte[2][c];
+        const unsigned char s3 = state->byte[3][c];
+
+        // Compute bytes according to the AES specification
+        state->byte[0][c] = aes_add(aes_add(aes_mult(0x0e, s0), aes_mult(0x0b, s1)), aes_add(aes_mult(0x0d, s2), aes_mult(0x09, s3)));
+        state->byte[1][c] = aes_add(aes_add(aes_mult(0x09, s0), aes_mult(0x0e, s1)), aes_add(aes_mult(0x0b, s2), aes_mult(0x0d, s3)));
+        state->byte[2][c] = aes_add(aes_add(aes_mult(0x0d, s0), aes_mult(0x09, s1)), aes_add(aes_mult(0x0e, s2), aes_mult(0x0b, s3)));
+        state->byte[3][c] = aes_add(aes_add(aes_mult(0x0b, s0), aes_mult(0x0d, s1)), aes_add(aes_mult(0x09, s2), aes_mult(0x0e, s3)));
+    }
+}
 
 void encrypt(E_KEYSIZE keysize, State** state_array) {
     printf("*****EXECUTING encrypt()*****\n");
