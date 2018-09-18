@@ -31,10 +31,17 @@ typedef struct {
     unsigned char byte[4][NUM_COL];
 } State;
 
+typedef struct {
+    unsigned char byte[4][1]
+} Word;
+
+typedef Word* Key;
+typedef Word* KeySchedule;
+
 Options handleArgs(int, char**);
 
 State** readStates(char* filename);
-long int findSize(char* file_name); 
+long int findSize(char* file_name);
 void printStates(State** state_array_ptr);
 
 size_t writeStates(const char*, State**);

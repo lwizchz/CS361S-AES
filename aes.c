@@ -192,11 +192,11 @@ State** readStates(char* filename) {
                     }
                 }
             }
-        }  
+        }
     }
 
     fclose(fptr);
-    
+
     if (rem != 0) {
         printf("remainder not 0\n");
         state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE - rem;
@@ -321,17 +321,124 @@ void shiftRows(State* state) {
     state->byte[3][3] = s3_2;
 }
 void mixColumns(State* state) {}
-void addRoundKey(State* state) {}
 
-//void rotWord(State* state) {}
-//void subWord(State* state) {}
+/*
+ * addRoundkey: XOR the state with a 128-bit round key
+ * derived from the original key K by a recursive process.
+ *
+ * The input text (state) is represented as a 4 x 4 array of bytes.
+ * The key is represented as a 4 x n array of bytes,
+ * where n depends on the key size (10 or 14)
+ */
+void addRoundKey(State* state) {
+
+}
+
+
+
+
+// Generate Key schedule
+void generateKeySchedule(E_KEYSIZE keysize, ) {
+    // rawKey = Read in key into an array with (keysize/4) Word s
+
+    // Key Expansion
+}
+// Key Expansion
+void keyExpansion(Key rawKey, E_KEYSIZE keysize) {
+    int numRounds;
+    if (keysize == KEYSIZE_128) {
+        numRounds = NUM_ROUNDS_128;
+    } else {
+        numRounds = NUM_ROUNDS_256;
+    }
+    // schedule = malloc KeySchedule with (numRounds+1) Word s
+    KeySchedule schedule = (Word *)malloc(sizeof(Word)*(numRounds+1));
+
+    Word temp;
+    int i = 0;
+    while (i < keysize) {
+        copyWord(schedule[i], key[i]);
+        i = i+1;
+    }
+    i = keysize; // should be the case but reassurance
+    while (i < NUM_COL*(numRounds+1)) {
+        copyWord(temp, schedule[i-1]);
+        if (i % keysize = 0) {
+            // copyWord(temp, subWord(rotWord(temp)) ^ Rcon[i/keysize])
+        } else if (keysize > 6 && i % keysize = 4) {
+            // magic
+        }
+        schedule[i] = schedule[i-keysize] ^ temp;
+        i = i+1;
+    }
+
+
+}
+
+// assumes memory is setup
+void copyWord(Word* to, Word* from) {
+    to->byte[0][0] = from->byte[0][0];
+    to->byte[1][0] = from->byte[1][0];
+    to->byte[2][0] = from->byte[2][0];
+    to->byte[3][0] = from->byte[3][0];
+}
+
+/*
+Nk = key length (4 or 8)
+Nb = Block Size  (4)
+Nr = Num Rounds (10 or 14)
+KeyExpansion(byte key[4*Nk], word w[Nb*(Nr+1)], Nk) begin
+    word temp
+    i=0
+    while (i < Nk)
+        w[i] = word(key[4*i], key[4*i+1], key[4*i+2], key[4*i+3])
+        i = i+1
+    end while
+    i = Nk
+    while (i < Nb * (Nr+1)]
+        temp = w[i-1]
+        if (i mod Nk = 0)
+            temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
+        else if (Nk > 6 and i mod Nk = 4)
+             temp = SubWord(temp)
+        end if
+        w[i] = w[i-Nk] xor temp
+        i=i+1
+    end while
+end
+*/
+
+//void rotWord(Word* word) {a,b,c,d -> b,c,d,a}
+Word* rotWord(Word* word) {
+    unsigned char temp = word->byte[0][0];
+    word->byte[0][0] = word->byte[1][0];
+    word->byte[1][0] = word->byte[2][0];
+    word->byte[2][0] = word->byte[3][0];
+    word->byte[3][0] = temp;
+    return word;
+}
+
+
+//void subWord(Word* word) {}
+Word* subWord(Word* word) {
+    int c = 0;
+    for (int r = 0; r < 4; r++) {
+        char sbox_col_idx = (word->byte[r][c] & 0x0f);
+        char sbox_row_idx = (word->byte[r][c] & 0xf0) >> 4;
+        word->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
+    }
+    return word;
+}
 
 void invSubBytes(State* state) {}
 void invShiftRows(State* state) {}
 void invMixColumns(State* state) {}
 
 
-void encrypt(E_KEYSIZE keysize, State** state_array) {}
+void encrypt(E_KEYSIZE keysize, State** state_array) {
+    //generate key schedule
+
+}
 void decrypt(E_KEYSIZE keysize, State** state_array) {}
 
 #endif
