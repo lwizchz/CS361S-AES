@@ -262,6 +262,13 @@ size_t writeStates(const char* filename, State** state_array) {
     return bytes;
 }
 
+void freeStates(State** state_array) {
+    for (int i=0; state_array[i]; i++) {
+        free(state_array[i]);
+    }
+    free(state_array);
+}
+
 void subBytes(State* state) {
     for (int r = 0; r < 4; r++) {
         for (int c = 0; c < NUM_COL; c++) {
