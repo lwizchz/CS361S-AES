@@ -10,7 +10,7 @@
 
 #include "aes.h"
 
-unsigned char aes_sbox[16][16] = {
+const unsigned char aes_sbox[16][16] = {
     /*       0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f   */
     /* 0 */ {0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76},
     /* 1 */ {0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0},
@@ -29,7 +29,7 @@ unsigned char aes_sbox[16][16] = {
     /* e */ {0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf},
     /* f */ {0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16}
 };
-unsigned char aes_inv_sbox[16][16] = {
+const unsigned char aes_inv_sbox[16][16] = {
     /*       0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f   */
     /* 0 */ {0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb},
     /* 1 */ {0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb},
@@ -48,6 +48,7 @@ unsigned char aes_inv_sbox[16][16] = {
     /* e */ {0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61},
     /* f */ {0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d}
 };
+const short aes_irreducible = 0x011b; // The irreducible polynomial m(x) = x^8 + x^4 + x^3 + x + 1
 
 void testSBox() {
     unsigned char v_0 = '\0';
@@ -226,6 +227,15 @@ State** readStates(char* filename) {
     }
     printf("*****FINISHED EXECUTING shiftRows()*****\n");
     printStates(state_array);
+    
+    // Testing mixColumns()
+    printf("*****EXECUTING mixColumns()*****\n");
+    for (int a = 0; a < arrays_needed; a++){
+        mixColumns(state_array[a]);
+    }
+    printf("*****FINISHED EXECUTING mixColumns()*****\n");
+    printStates(state_array);
+    
     return state_array;
 }
 //Function findSize() taken from https://www.geeksforgeeks.org/c-program-find-size-file/
@@ -320,7 +330,52 @@ void shiftRows(State* state) {
     state->byte[3][2] = s3_1;
     state->byte[3][3] = s3_2;
 }
-void mixColumns(State* state) {}
+unsigned char aes_add(unsigned char a, unsigned char b) {
+    return a ^ b;
+}
+unsigned char xtime(unsigned char a, int x) {
+    if (x == 0) {
+        return a;
+    }
+    
+    // Conditional add of the irreducible polynomial 0x011b to reduce a*0x02
+    if (a & 0x80) {
+        a = aes_add(a<<1, aes_irreducible);
+    } else {
+        a <<= 1;
+    }
+    return xtime(a, x-1);
+}
+unsigned char aes_mult(unsigned char a, unsigned char b) {
+    if ((a == 0)||(b == 0)) {
+        return 0;
+    }
+    
+    unsigned char r = 0;
+    for (int i=0; i<8; i++) {
+        // Conditionally add the multiplication by 0x02*i
+        if (b & 1<<i) {
+            r = aes_add(r, xtime(a, i));
+        }
+    }
+    
+    return r;
+}
+void mixColumns(State* state) {
+    for (int c=0; c<3; c++) {
+        // Store bytes for computation
+        const unsigned char s0 = state->byte[0][c];
+        const unsigned char s1 = state->byte[1][c];
+        const unsigned char s2 = state->byte[2][c];
+        const unsigned char s3 = state->byte[3][c];
+        
+        // Compute bytes according to the AES specification
+        state->byte[0][c] = aes_add(aes_add(aes_mult(0x02, s0), aes_mult(0x03, s1)), aes_add(s2, s3));
+        state->byte[1][c] = aes_add(aes_add(s0, aes_mult(0x02, s1)), aes_add(aes_mult(0x03, s2), s3));
+        state->byte[2][c] = aes_add(aes_add(s0, s1), aes_add(aes_mult(0x02, s2), aes_mult(0x03, s3)));
+        state->byte[3][c] = aes_add(aes_add(aes_mult(0x03, s0), s1), aes_add(s2, aes_mult(0x02, s3)));
+    }
+}
 void addRoundKey(State* state) {}
 
 //void rotWord(State* state) {}
