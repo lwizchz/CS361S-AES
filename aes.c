@@ -183,7 +183,7 @@ State** readStates(char* filename) {
         State* current_state = malloc(sizeof(State));
         state_array[a] = current_state;
 
-        for (int c = 0; c < 4; c++) {
+        for (int c = 0; c < NUM_COL; c++) {
             for (int r = 0; r < 4; r++) {
                 fread(&current_state->byte[r][c], sizeof(char), 1, fptr);
 
@@ -193,11 +193,11 @@ State** readStates(char* filename) {
                     }
                 }
             }
-        }  
+        }
     }
 
     fclose(fptr);
-    
+
     if (rem != 0) {
         printf("remainder not 0\n");
         state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE - rem;
@@ -227,7 +227,7 @@ State** readStates(char* filename) {
     }
     printf("*****FINISHED EXECUTING shiftRows()*****\n");
     printStates(state_array);
-    
+
     // Testing mixColumns()
     printf("*****EXECUTING mixColumns()*****\n");
     for (int a = 0; a < arrays_needed; a++){
@@ -235,7 +235,7 @@ State** readStates(char* filename) {
     }
     printf("*****FINISHED EXECUTING mixColumns()*****\n");
     printStates(state_array);
-    
+
     return state_array;
 }
 //Function findSize() taken from https://www.geeksforgeeks.org/c-program-find-size-file/
@@ -261,7 +261,7 @@ long int findSize(char* file_name) {
 void printStates(State** state_array) {
     while (state_array && *state_array) {
         for (int r = 0; r < 4; r++) {
-            for (int c = 0; c < 4; c++) {
+            for (int c = 0; c < NUM_COL; c++) {
                 printf("%02x ", (*state_array)->byte[r][c]);
             }
             printf("\n");
@@ -280,7 +280,7 @@ size_t writeStates(const char* filename, State** state_array) {
     State* state = *state_array;
     size_t bytes = 0;
     while (state) {
-        for (int c=0; c<4; c++) {
+        for (int c=0; c<NUM_COL; c++) {
             for (int r=0; r<4; r++) {
                 bytes += fwrite(&state->byte[r][c], sizeof(char), 1, fh);
             }
@@ -295,7 +295,7 @@ size_t writeStates(const char* filename, State** state_array) {
 
 void subBytes(State* state) {
     for (int r = 0; r < 4; r++) {
-        for (int c = 0; c < 4; c++) {
+        for (int c = 0; c < NUM_COL; c++) {
             char sbox_col_idx = (state->byte[r][c] & 0x0f);
             char sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
             state->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
@@ -337,7 +337,7 @@ unsigned char xtime(unsigned char a, int x) {
     if (x == 0) {
         return a;
     }
-    
+
     // Conditional add of the irreducible polynomial 0x011b to reduce a*0x02
     if (a & 0x80) {
         a = aes_add(a<<1, aes_irreducible);
@@ -350,7 +350,7 @@ unsigned char aes_mult(unsigned char a, unsigned char b) {
     if ((a == 0)||(b == 0)) {
         return 0;
     }
-    
+
     unsigned char r = 0;
     for (int i=0; i<8; i++) {
         // Conditionally add the multiplication by 0x02*i
@@ -358,17 +358,17 @@ unsigned char aes_mult(unsigned char a, unsigned char b) {
             r = aes_add(r, xtime(a, i));
         }
     }
-    
+
     return r;
 }
 void mixColumns(State* state) {
-    for (int c=0; c<3; c++) {
+    for (int c=0; c<NUM_COL; c++) {
         // Store bytes for computation
         const unsigned char s0 = state->byte[0][c];
         const unsigned char s1 = state->byte[1][c];
         const unsigned char s2 = state->byte[2][c];
         const unsigned char s3 = state->byte[3][c];
-        
+
         // Compute bytes according to the AES specification
         state->byte[0][c] = aes_add(aes_add(aes_mult(0x02, s0), aes_mult(0x03, s1)), aes_add(s2, s3));
         state->byte[1][c] = aes_add(aes_add(s0, aes_mult(0x02, s1)), aes_add(aes_mult(0x03, s2), s3));
@@ -385,8 +385,61 @@ void invSubBytes(State* state) {}
 void invShiftRows(State* state) {}
 void invMixColumns(State* state) {}
 
+void encrypt(E_KEYSIZE keysize, State** state_array) {
+    printf("*****EXECUTING encrypt()*****\n");
 
-void encrypt(E_KEYSIZE keysize, State** state_array) {}
-void decrypt(E_KEYSIZE keysize, State** state_array) {}
+    const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
+    while (state_array && *state_array) {
+        State* state = *state_array;
+
+        //addRoundKey(state, words[0]);
+        addRoundKey(state);
+
+        for (int r=1; r<Nr-1; r++) {
+            subBytes(state);
+            shiftRows(state);
+            mixColumns(state);
+            //addRoundKey(state, words[r*NUM_COL]);
+            addRoundKey(state);
+        }
+
+        subBytes(state);
+        shiftRows(state);
+        //addRoundKey(state, words[Nr*NUM_COL]);
+        addRoundKey(state);
+
+        state_array++;
+    }
+
+    printf("*****FINISHED EXECUTING encrypt()*****\n");
+}
+void decrypt(E_KEYSIZE keysize, State** state_array) {
+    printf("*****EXECUTING decrypt()*****\n");
+
+    const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
+    while (state_array && *state_array) {
+        State* state = *state_array;
+
+        //addRoundKey(state, words[Nr*NUM_COL]);
+        addRoundKey(state);
+
+        for (int r=Nr-1; r>0; r--) {
+            invShiftRows(state);
+            invSubBytes(state);
+            //addRoundKey(state, words[r*NUM_COL]);
+            addRoundKey(state);
+            invMixColumns(state);
+        }
+
+        invShiftRows(state);
+        invSubBytes(state);
+        //addRoundKey(state, words[0]);
+        addRoundKey(state);
+
+        state_array++;
+    }
+
+    printf("*****FINISHED EXECUTING decrypt()*****\n");
+}
 
 #endif
