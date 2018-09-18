@@ -9,6 +9,8 @@ int main(int argc, char** argv) {
 
     State** state_array = readStates(opt.inputfile);
 
+    printStates(state_array);
+    
     encrypt(opt.keysize, state_array);
     printStates(state_array);
 

@@ -199,42 +199,11 @@ State** readStates(char* filename) {
     fclose(fptr);
 
     if (rem != 0) {
-        printf("remainder not 0\n");
         state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE - rem;
     }
     else {
-        printf("remainder is 0\n");
         state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE;
     }
-
-    printStates(state_array);
-
-    printf("State array pointer location: %p\n", (void*) state_array);
-    printf("File Size: %ld\n", findSize(filename));
-
-    //Testing subBytes()
-    printf("*****EXECUTING subBytes()*****\n");
-    for (int a = 0; a < arrays_needed; a++){
-        subBytes(state_array[a]);
-    }
-    printf("*****FINISHED EXECUTING subBytes()*****\n\n");
-    printStates(state_array);
-
-    //Testing shiftRows()
-    printf("*****EXECUTING shiftRows()*****\n");
-    for (int a = 0; a < arrays_needed; a++){
-        shiftRows(state_array[a]);
-    }
-    printf("*****FINISHED EXECUTING shiftRows()*****\n");
-    printStates(state_array);
-
-    // Testing mixColumns()
-    printf("*****EXECUTING mixColumns()*****\n");
-    for (int a = 0; a < arrays_needed; a++){
-        mixColumns(state_array[a]);
-    }
-    printf("*****FINISHED EXECUTING mixColumns()*****\n");
-    printStates(state_array);
 
     return state_array;
 }
@@ -302,7 +271,7 @@ void subBytes(State* state) {
         }
     }
 }
-// All row shifts are left and cyclical
+// All row shifts are left cyclically
 void shiftRows(State* state) {
     // Do nothing to Row 0
 
@@ -381,8 +350,41 @@ void addRoundKey(State* state) {}
 //void rotWord(State* state) {}
 //void subWord(State* state) {}
 
-void invSubBytes(State* state) {}
-void invShiftRows(State* state) {}
+void invSubBytes(State* state) {
+    for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < NUM_COL; c++) {
+            char inv_sbox_col_idx = (state->byte[r][c] & 0x0f);
+            char inv_sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
+            state->byte[r][c] = aes_inv_sbox[inv_sbox_row_idx][inv_sbox_col_idx];
+        }
+    }
+}
+// All row shifts are right cyclically
+void invShiftRows(State* state) {
+    // Do nothing to Row 0
+
+    // Shift Row 1 by 1
+    char s1_3 = state->byte[1][3];
+    for (int c = 3; c > 0; c--) {
+        state->byte[1][c] = state->byte[1][c - 1];
+    }
+    state->byte[1][0] = s1_3;
+
+    // Shift Row 2 by 2
+    char s2_0 = state->byte[2][0];
+    char s2_1 = state->byte[2][1];
+    state->byte[2][0] = state->byte[2][2];
+    state->byte[2][1] = state->byte[2][3];
+    state->byte[2][2] = s2_0;
+    state->byte[2][3] = s2_1;
+
+    // Shift Row 3 by 3
+    char s3_0 = state->byte[3][0];
+    for (int c = 0; c < 3; c++) {
+        state->byte[3][c] = state->byte[3][c + 1];
+    }
+    state->byte[3][3] = s3_0;
+}
 void invMixColumns(State* state) {
     for (int c=0; c<NUM_COL; c++) {
         // Store bytes for computation
@@ -409,7 +411,7 @@ void encrypt(E_KEYSIZE keysize, State** state_array) {
         //addRoundKey(state, words[0]);
         addRoundKey(state);
 
-        for (int r=1; r<Nr-1; r++) {
+        for (int r=1; r<=Nr-1; r++) {
             subBytes(state);
             shiftRows(state);
             mixColumns(state);
