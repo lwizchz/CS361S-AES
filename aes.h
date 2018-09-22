@@ -31,11 +31,19 @@ typedef struct {
     unsigned char byte[4][NUM_COL];
 } State;
 
+typedef struct {
+    unsigned char byte[4][1];
+} Word;
+
+typedef Word* Key;
+typedef Word* KeySchedule;
+
 Options handleArgs(int, char**);
 
 State** readStates(char*);
 long int findSize(char*); 
 void printStates(State**);
+
 
 size_t writeStates(const char*, State**);
 
@@ -44,8 +52,16 @@ void freeStates(State**);
 void subBytes(State*);
 void shiftRows(State*);
 void mixColumns(State*);
-void addRoundKey(State*);
+void addRoundKey(State* state, Word* partialSchedule);
 
+KeySchedule generateKeySchedule(const char* keyfile, E_KEYSIZE keysize);
+KeySchedule keyExpansion(Key rawKey, E_KEYSIZE keysize);
+void copyWord(Word* to, const Word* from);
+Word xorWord(Word* left, Word* right);
+Word* rotWord(Word* word);
+Word* subWord(Word* word);
+Word rcon(int i);
+Key readKey(const char* filename, E_KEYSIZE keysize);
 //void rotWord(State*);
 //void subWord(State*);
 
@@ -53,7 +69,7 @@ void invSubBytes(State*);
 void invShiftRows(State*);
 void invMixColumns(State*);
 
-void encrypt(E_KEYSIZE, State**);
-void decrypt(E_KEYSIZE, State**);
+void encrypt(E_KEYSIZE, State**, KeySchedule);
+void decrypt(E_KEYSIZE, State**, KeySchedule);
 
 #endif

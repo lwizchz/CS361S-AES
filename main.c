@@ -9,17 +9,22 @@ int main(int argc, char** argv) {
 
     State** state_array = readStates(opt.inputfile);
     printStates(state_array);
+
+    KeySchedule schedule = generateKeySchedule(opt.keyfile, opt.keysize);
     
-    encrypt(opt.keysize, state_array);
+    encrypt(opt.keysize, state_array, schedule);
     printStates(state_array);
 
     writeStates(opt.outputfile, state_array);
 
-    decrypt(opt.keysize, state_array);
+    decrypt(opt.keysize, state_array, schedule);
+    writeStates("tests/decrypted0", state_array);
     printStates(state_array);
 
     freeStates(state_array);
     state_array = NULL;
+
+    free(schedule);
 
     return 0;
 }
