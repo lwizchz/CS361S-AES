@@ -32,7 +32,7 @@ typedef struct {
 } State;
 
 typedef struct {
-    unsigned char byte[4][1]
+    unsigned char byte[4][1];
 } Word;
 
 typedef Word* Key;
@@ -49,8 +49,15 @@ size_t writeStates(const char*, State**);
 void subBytes(State*);
 void shiftRows(State*);
 void mixColumns(State*);
-void addRoundKey(State*);
+void addRoundKey(State* state, Word* partialSchedule);
 
+KeySchedule keyExpansion(Key rawKey, E_KEYSIZE keysize);
+void copyWord(Word* to, const Word* from);
+Word xorWord(Word* left, Word* right);
+Word* rotWord(Word* word);
+Word* subWord(Word* word);
+Word rcon(int i);
+Key readKey(const char* filename, E_KEYSIZE keysize);
 //void rotWord(State*);
 //void subWord(State*);
 

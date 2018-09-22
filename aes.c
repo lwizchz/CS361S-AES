@@ -330,21 +330,28 @@ void mixColumns(State* state) {}
  * The key is represented as a 4 x n array of bytes,
  * where n depends on the key size (10 or 14)
  */
-void addRoundKey(State* state) {
+void addRoundKey(State* state, Word* partialSchedule) {
 
+    for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < NUM_COL; c++) {
+            state->byte[r][c] = state->byte[r][c] ^ partialSchedule[c].byte[r][0];
+        }
+    }
 }
-
 
 
 
 // Generate Key schedule
-void generateKeySchedule(E_KEYSIZE keysize, ) {
+KeySchedule generateKeySchedule(const char* keyfile, E_KEYSIZE keysize) {
     // rawKey = Read in key into an array with (keysize/4) Word s
+    Key rawKey = readKey(keyfile, keysize);
+
+    return keyExpansion(rawKey, keysize);
 
     // Key Expansion
 }
 // Key Expansion
-void keyExpansion(Key rawKey, E_KEYSIZE keysize) {
+KeySchedule keyExpansion(Key rawKey, E_KEYSIZE keysize) {
     int numRounds;
     if (keysize == KEYSIZE_128) {
         numRounds = NUM_ROUNDS_128;
@@ -357,30 +364,42 @@ void keyExpansion(Key rawKey, E_KEYSIZE keysize) {
     Word temp;
     int i = 0;
     while (i < keysize) {
-        copyWord(schedule[i], key[i]);
+        copyWord(&schedule[i], &rawKey[i]);
         i = i+1;
     }
     i = keysize; // should be the case but reassurance
     while (i < NUM_COL*(numRounds+1)) {
-        copyWord(temp, schedule[i-1]);
-        if (i % keysize = 0) {
-            copyWord(temp, subWord(rotWord(temp)) ^ rcon(i/keysize));
-        } else if (keysize > 6 && i % keysize = 4) {
-            copyWord(temp, subWord(temp));
+        copyWord(&temp, &schedule[i-1]);
+        if (i % keysize == 0) {
+            Word rconTmp = rcon(i/keysize);
+            Word xorTmp = xorWord(subWord(rotWord(&temp)), &rconTmp);
+            copyWord(&temp, &xorTmp);
+        } else if (keysize > 6 && i % keysize == 4) {
+            copyWord(&temp, subWord(&temp));
         }
-        schedule[i] = schedule[i-keysize] ^ temp;
+        Word xorTmp = xorWord(&schedule[i-keysize], &temp);
+        copyWord(&schedule[i], &xorTmp);
         i = i+1;
     }
 
-
+    return schedule;
 }
 
 // assumes memory is setup
-void copyWord(Word* to, Word* from) {
+void copyWord(Word* to, const Word* from) {
     to->byte[0][0] = from->byte[0][0];
     to->byte[1][0] = from->byte[1][0];
     to->byte[2][0] = from->byte[2][0];
     to->byte[3][0] = from->byte[3][0];
+}
+
+Word xorWord(Word* left, Word* right) {
+    Word a;
+    a.byte[0][0] = left->byte[0][0] ^ right->byte[0][0];
+    a.byte[1][0] = left->byte[1][0] ^ right->byte[1][0];
+    a.byte[2][0] = left->byte[2][0] ^ right->byte[2][0];
+    a.byte[3][0] = left->byte[3][0] ^ right->byte[3][0];
+    return a;
 }
 
 /*
@@ -430,15 +449,42 @@ Word* subWord(Word* word) {
     return word;
 }
 
-unsigned char rcon(int i) {
-    assert(i != 0);
-    assert(!(i > 10));
+Word rcon(int i) {
+    // assert(i != 0);
+    // assert(!(i > 10));
     unsigned char Rcon[10] = {
     //  1       2       3       4       5       6       7       8       9       10
         0x01,   0x02,   0x04,   0x08,   0x10,   0x20,   0x40,   0x80,   0x1b,   0x36
     };
-    return Rcon[i-1];
+    Word w = {0};
+    w.byte[0][0] = Rcon[i-1];
+    return w;
 }
+
+
+Key readKey(const char* filename, E_KEYSIZE keysize) {
+    // find size of file and check if it exists
+    FILE* fptr = fopen(filename, "rb");
+    if (fptr == NULL) {
+        exitError("File Not Found!\n");
+    }
+
+    int bytes_needed = (keysize == KEYSIZE_128) ? 16 : 32;
+    int words_needed = bytes_needed/4;
+    Key key = malloc(bytes_needed);
+
+    for (int i = 0; i < words_needed; i++) {
+        for (int c = 0; c < 4; c++) {
+            fread(&key[i].byte[c][0], sizeof(char), 1, fptr);
+        }
+    }
+    
+
+    fclose(fptr);
+
+    return key;
+}
+
 
 void invSubBytes(State* state) {}
 void invShiftRows(State* state) {}
