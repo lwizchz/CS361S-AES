@@ -70,7 +70,8 @@ according to the algorithm in the NIST (p. 15). The substitution scheme is as
 follows: for each byte {XY} in the state arrays, index into the S-box using
 nibble X as the row index and nibble Y as the column index to find the byte
 with which you will replace. Each byte is read in as a char, and then a
-few simple bitwise operations are used to obtain X and Y by themselves.
+few simple bitwise operations are used to obtain nibble X and nibble Y by 
+themselves.
 
 - decrypt(): Like encrypt(), we essentially copied the pseudocode for
 InvCipher() in the NIST (p. 21). We chose not to implement the EqInvCipher()
@@ -78,4 +79,22 @@ defined on p. 25 of the NIST. This function takes in the key size (to determine
 how many rounds to execute) and a pointer to the state_array. It then
 performs the four main inverse sub-routines - invAddRoundKey(), invShiftRows(),
 invMixColumns(), and invSubBytes() - in the order shown in the NIST for
-InvCipher().  
+InvCipher().
+
+- invShiftRows(): This function rotates bytes right in the state arrays
+cyclically. The number of positions to be rotated corresponds to the row number;
+i.e. entries in the 0th row move by 0 positions, entries in the 1st row
+move by 1 position, entries in the 2nd row move by 2 positions, and entries
+in the 3rd row move by 3 positions.
+
+- invSubBytes(): This function substitutes the bytes from the state array with
+bytes from the inv_aes_sbox. inv_aes_sbox is manually copied into our program 
+file to match the Inverse S-box shown in the NIST (p. 22) rather than being 
+generated at runtime. The substitution scheme is as follows: for each byte {XY} 
+in the state arrays, index into the Inverse S-box using
+nibble X as the row index and nibble Y as the column index to find the byte
+with which you will replace. Each byte is read in as a char, and then a
+few simple bitwise operations are used to obtain nibble X and nibble Y by 
+themselves.
+
+
