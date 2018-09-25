@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
@@ -62,9 +63,9 @@ void testSBox() {
         unsigned char v_2 = aes_inv_sbox[r_1][c_1];
 
         if (v_0 != v_2) {
-            printf("AES sbox failed for 0x%02x : produced 0x%02x through 0x%02x\n", v_0, v_2, v_1);
-            printf("v_0 indices: 0x%02x 0x%02x\n", r_0, c_0);
-            printf("v_1 indices: 0x%02x 0x%02x\n", r_1, c_1);
+            fprintf(stderr, "AES sbox failed for 0x%02x : produced 0x%02x through 0x%02x\n", v_0, v_2, v_1);
+            fprintf(stderr, "v_0 indices: 0x%02x 0x%02x\n", r_0, c_0);
+            fprintf(stderr, "v_1 indices: 0x%02x 0x%02x\n", r_1, c_1);
             exit(1);
         }
 
@@ -78,6 +79,7 @@ const struct option long_opts[] = {
     {"inputfile", required_argument, NULL, 'i'},
     {"outputfile", required_argument, NULL, 'o'},
     {"mode", required_argument, NULL, 'm'},
+    {"verbose", no_argument, NULL, 'v'},
     {NULL, 0, NULL, 0}
 };
 
@@ -91,11 +93,12 @@ Options handleArgs(int argc, char** argv) {
     Options opt = {
         KEYSIZE_128,
         MODE_ENCRYPT,
+        false,
         NULL, NULL, NULL
     };
 
     char c;
-    while ((c = getopt_long(argc, argv, "s:k:i:o:m:", long_opts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "s:k:i:o:m:v", long_opts, NULL)) != -1) {
         switch (c) {
             case 's': {
                 if (strcmp(optarg, "128") == 0) {
@@ -148,6 +151,10 @@ Options handleArgs(int argc, char** argv) {
                 } else {
                     exitError("Invalid mode\n");
                 }
+                break;
+            }
+            case 'v': {
+                opt.is_verbose = true;
                 break;
             }
             default: {}
@@ -570,60 +577,46 @@ void invMixColumns(State* state) {
 }
 
 void encrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
-    printf("*****EXECUTING encrypt()*****\n");
-
     const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
     while (state_array && *state_array) {
         State* state = *state_array;
 
         addRoundKey(state, &words[0]);
-        // addRoundKey(state);
 
         for (int r=1; r<=Nr-1; r++) {
             subBytes(state);
             shiftRows(state);
             mixColumns(state);
             addRoundKey(state, &words[r*NUM_COL]);
-            // addRoundKey(state);
         }
 
         subBytes(state);
         shiftRows(state);
         addRoundKey(state, &words[Nr*NUM_COL]);
-        // addRoundKey(state);
 
         state_array++;
     }
-
-    printf("*****FINISHED EXECUTING encrypt()*****\n");
 }
 void decrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
-    printf("*****EXECUTING decrypt()*****\n");
-
     const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
     while (state_array && *state_array) {
         State* state = *state_array;
 
         addRoundKey(state, &words[Nr*NUM_COL]);
-        // addRoundKey(state);
 
         for (int r=Nr-1; r>0; r--) {
             invShiftRows(state);
             invSubBytes(state);
             addRoundKey(state, &words[r*NUM_COL]);
-            // addRoundKey(state);
             invMixColumns(state);
         }
 
         invShiftRows(state);
         invSubBytes(state);
         addRoundKey(state, &words[0]);
-        // addRoundKey(state);
 
         state_array++;
     }
-
-    printf("*****FINISHED EXECUTING decrypt()*****\n");
 }
 
 
