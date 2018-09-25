@@ -330,7 +330,7 @@ unsigned char aes_mult(unsigned char a, unsigned char b) {
 
     unsigned char r = 0;
     for (int i=0; i<8; i++) {
-        // Conditionally add the multiplication by 0x02*i
+        // Conditionally add the multiplication by 0x02<<i
         if (b & 1<<i) {
             r = aes_add(r, xtime(a, i));
         }
