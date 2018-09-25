@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
             break;
         }
         default: {
-            fprintf(stderr, "Invalid mode: ", opt.mode);
+            fprintf(stderr, "Invalid mode: %d", opt.mode);
             return 1;
         }
     }
