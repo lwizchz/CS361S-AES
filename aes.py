@@ -148,7 +148,11 @@ class Application(tk.Frame):
                 subprocess.run(cmd, check=True)
             except FileNotFoundError as e:
                 print(e)
-                tkmsg.showwarning("AES", "Failed to run ./aes, make sure it's been compiled with `make`")
+                tkmsg.showwarning("AES", "Failed to find ./aes, make sure it's been compiled with `make`")
+                return
+            except subprocess.CalledProcessError as e:
+                print(e)
+                tkmsg.showwarning("AES", "Failed to run ./aes, see the console for more info")
                 return
 
             with open(outputfile, "rb") as f:
@@ -161,6 +165,7 @@ class Application(tk.Frame):
                         self.output_input.insert(tk.END, b.decode("utf8"))
                     except UnicodeDecodeError as e:
                         print(e)
+                        print(b)
                         tkmsg.showwarning("AES", "Failed to decode: {}".format(b))
         else:
             msg = "Invalid argument"

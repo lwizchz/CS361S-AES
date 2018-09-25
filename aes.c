@@ -83,7 +83,7 @@ const struct option long_opts[] = {
     {NULL, 0, NULL, 0}
 };
 
-void exitError(char* str) {
+void exitError(const char* str) {
     fprintf(stderr, str, "");
     exit(1);
 }
@@ -174,9 +174,10 @@ Options handleArgs(int argc, char** argv) {
     return opt;
 }
 
-State** readStates(char* filename) {
+State** readStates(const char* filename, size_t* bytes_read) {
     // find size of file and check if it exists
     size_t file_size_bytes = findSize(filename);
+    *bytes_read = file_size_bytes;
     // determine how many state arrays are needed
     int arrays_needed = floor((double) file_size_bytes / BLOCK_SIZE) + 1;
 
@@ -197,7 +198,8 @@ State** readStates(char* filename) {
 
                 if (a == arrays_needed - 1) {
                     if (r + 4*c >= BLOCK_SIZE - rem) {
-                        current_state->byte[r][c] = 0;
+                        fclose(fptr);
+                        return state_array;
                     }
                 }
             }
@@ -206,17 +208,10 @@ State** readStates(char* filename) {
 
     fclose(fptr);
 
-    if (rem != 0) {
-        state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE - rem;
-    }
-    else {
-        state_array[arrays_needed - 1]->byte[3][3] = BLOCK_SIZE;
-    }
-
     return state_array;
 }
 //Function findSize() taken from https://www.geeksforgeeks.org/c-program-find-size-file/
-long int findSize(char* file_name) {
+long int findSize(const char* file_name) {
     // opening the file in read mode
     FILE* fp = fopen(file_name, "rb");
 
@@ -246,20 +241,25 @@ void printStates(State** state_array) {
         printf("\n");
         state_array++;
     }
+    printf("---\n\n");
 }
 
-size_t writeStates(const char* filename, State** state_array) {
+size_t writeStates(const char* filename, State** state_array, size_t total_bytes) {
     FILE* fh = fopen(filename, "wb");
     if (fh == NULL) {
         exitError("Error opening output file\n");
     }
 
     State* state = *state_array;
-    size_t bytes = 0;
+    size_t bytes_written = 0;
     while (state) {
         for (int c=0; c<NUM_COL; c++) {
             for (int r=0; r<4; r++) {
-                bytes += fwrite(&state->byte[r][c], sizeof(char), 1, fh);
+                bytes_written += fwrite(&state->byte[r][c], sizeof(char), 1, fh);
+                if (bytes_written >= total_bytes) {
+                    fclose(fh);
+                    return bytes_written;
+                }
             }
         }
         state = *(++state_array);
@@ -267,7 +267,7 @@ size_t writeStates(const char* filename, State** state_array) {
 
     fclose(fh);
 
-    return bytes;
+    return bytes_written;
 }
 
 void freeStates(State** state_array) {
@@ -576,10 +576,38 @@ void invMixColumns(State* state) {
     }
 }
 
-void encrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
+State** encrypt(E_KEYSIZE keysize, State** state_array, size_t* state_bytes, KeySchedule words) {
+    // Add padding
+    int rem = *state_bytes % BLOCK_SIZE;
+    int arrays_needed = floor((double) *state_bytes / BLOCK_SIZE) + 1;
+    if (rem == 0) {
+        // Add empty block
+        state_array = realloc(state_array, sizeof(State*) * (arrays_needed + 2));
+        state_array[arrays_needed] = malloc(sizeof(State));
+        state_array[arrays_needed+1] = NULL;
+
+        for (int c = 0; c < NUM_COL; c++) {
+            for (int r = 0; r < 4; r++) {
+                state_array[arrays_needed]->byte[r][c] = 0;
+            }
+        }
+        state_array[arrays_needed]->byte[3][3] = BLOCK_SIZE;
+    } else {
+        for (int c = 0; c < NUM_COL; c++) {
+            for (int r = 0; r < 4; r++) {
+                if (r + 4*c >= BLOCK_SIZE - rem) {
+                    state_array[arrays_needed-1]->byte[r][c] = 0;
+                }
+            }
+        }
+        state_array[arrays_needed-1]->byte[3][3] = BLOCK_SIZE - rem;
+    }
+    *state_bytes += BLOCK_SIZE - rem;
+
+    // Run cipher
     const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
-    while (state_array && *state_array) {
-        State* state = *state_array;
+    for (int i=0; state_array && state_array[i]; i++) {
+        State* state = state_array[i];
 
         addRoundKey(state, &words[0]);
 
@@ -593,14 +621,15 @@ void encrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
         subBytes(state);
         shiftRows(state);
         addRoundKey(state, &words[Nr*NUM_COL]);
-
-        state_array++;
     }
+
+    return state_array;
 }
-void decrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
+State** decrypt(E_KEYSIZE keysize, State** state_array, size_t* state_bytes, KeySchedule words) {
+    // Run cipher
     const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
-    while (state_array && *state_array) {
-        State* state = *state_array;
+    for (int i=0; state_array && state_array[i]; i++) {
+        State* state = state_array[i];
 
         addRoundKey(state, &words[Nr*NUM_COL]);
 
@@ -614,10 +643,22 @@ void decrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
         invShiftRows(state);
         invSubBytes(state);
         addRoundKey(state, &words[0]);
-
-        state_array++;
     }
-}
 
+    // Remove padding
+    int rem = *state_bytes % BLOCK_SIZE;
+    int arrays_needed = floor((double) *state_bytes / BLOCK_SIZE);
+    if (state_array[arrays_needed-1]->byte[3][3] == BLOCK_SIZE) {
+        // Remove empty block
+        state_array = realloc(state_array, sizeof(State*) * (arrays_needed - 1));
+        free(state_array[arrays_needed-1]);
+        state_array[arrays_needed-1] = NULL;
+    } else {
+        rem = BLOCK_SIZE - state_array[arrays_needed-1]->byte[3][3];
+    }
+    *state_bytes -= BLOCK_SIZE - rem;
+
+    return state_array;
+}
 
 #endif

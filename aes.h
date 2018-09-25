@@ -41,12 +41,12 @@ typedef Word* KeySchedule;
 
 Options handleArgs(int, char**);
 
-State** readStates(char*);
-long int findSize(char*); 
+State** readStates(const char*, size_t*);
+long int findSize(const char*);
 void printStates(State**);
 
 
-size_t writeStates(const char*, State**);
+size_t writeStates(const char*, State**, size_t);
 
 void freeStates(State**);
 
@@ -70,7 +70,7 @@ void invSubBytes(State*);
 void invShiftRows(State*);
 void invMixColumns(State*);
 
-void encrypt(E_KEYSIZE, State**, KeySchedule);
-void decrypt(E_KEYSIZE, State**, KeySchedule);
+State** encrypt(E_KEYSIZE, State**, size_t*, KeySchedule);
+State** decrypt(E_KEYSIZE, State**, size_t*, KeySchedule);
 
 #endif

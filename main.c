@@ -7,7 +7,8 @@
 int main(int argc, char** argv) {
     Options opt = handleArgs(argc, argv);
 
-    State** state_array = readStates(opt.inputfile);
+    size_t state_bytes;
+    State** state_array = readStates(opt.inputfile, &state_bytes);
     if (opt.is_verbose) {
         printStates(state_array);
     }
@@ -16,19 +17,11 @@ int main(int argc, char** argv) {
 
     switch (opt.mode) {
         case MODE_ENCRYPT: {
-            encrypt(opt.keysize, state_array, schedule);
-            if (opt.is_verbose) {
-                printStates(state_array);
-            }
-            writeStates(opt.outputfile, state_array);
+            state_array = encrypt(opt.keysize, state_array, &state_bytes, schedule);
             break;
         }
         case MODE_DECRYPT: {
-            decrypt(opt.keysize, state_array, schedule);
-            if (opt.is_verbose) {
-                printStates(state_array);
-            }
-            writeStates(opt.outputfile, state_array);
+            state_array = decrypt(opt.keysize, state_array, &state_bytes, schedule);
             break;
         }
         default: {
@@ -36,6 +29,11 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+
+    if (opt.is_verbose) {
+        printStates(state_array);
+    }
+    writeStates(opt.outputfile, state_array, state_bytes);
 
     freeStates(state_array);
     state_array = NULL;
