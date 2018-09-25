@@ -105,6 +105,6 @@ index and nibble Y as the column index to find the byte with which you will
 replace. Each byte is read in as a char, and then a few simple bitwise
 operations are used to obtain nibble X and nibble Y by themselves.
 
--invMixColumns(): This function is much the same as mixColumns(), the primary
+- invMixColumns(): This function is much the same as mixColumns(), the primary
 difference being the matrix used in the equivalent operation. This matrix is
 specified in the NIST (p. 23).
