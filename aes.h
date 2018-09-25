@@ -21,6 +21,7 @@ typedef enum  {
 typedef struct {
     E_KEYSIZE keysize;
     E_MODE mode;
+    int is_verbose;
 
     char* keyfile;
     char* inputfile;
