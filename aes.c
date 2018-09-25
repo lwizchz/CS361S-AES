@@ -187,12 +187,12 @@ State** readStates(char* filename) {
         for (int c = 0; c < NUM_COL; c++) {
             for (int r = 0; r < 4; r++) {
                 fread(&current_state->byte[r][c], sizeof(char), 1, fptr);
-
+                /* Padding moved to encrypt()
                 if (a == arrays_needed - 1) {
                     if (r + 4*c >= BLOCK_SIZE - rem) {
                         current_state->byte[r][c] = 0;
                     }
-                }
+                }*/
             }
         }
     }
@@ -569,62 +569,82 @@ void invMixColumns(State* state) {
     }
 }
 
-void encrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
+void encrypt(E_KEYSIZE keysize, char* inputfile, KeySchedule words) {
     printf("*****EXECUTING encrypt()*****\n");
 
     const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
+
+    //Pad file
+    int fSize = fSize(inputfile);
+    char zero = 0;
+    char padding = fSize % BLOCK_SIZE;
+    File* fp = fopen(inputfile, "wb");
+    fseek(fp, 0L, SEEK_END);
+    if (padding == 0) {
+        char sixteen = BLOCK_SIZE;
+        for (int i = 0; i < BLOCK_SIZE; i++) {
+            fwrite(&zero, sizeof(char), 1, fp);
+        }
+    }
+    else {
+        for (int i = padding; i < BLOCK_SIZE; i++) {
+            fwrite(&zero, sizeof(char), 1, fp);
+        }
+    }
+    fwrite(&padding, sizeof(char), 1, fp);
+    fclose(fp);
+    //End pad file
+
+    State** state_array = readStates(inputfile);
+
     while (state_array && *state_array) {
         State* state = *state_array;
 
         addRoundKey(state, &words[0]);
-        // addRoundKey(state);
 
         for (int r=1; r<=Nr-1; r++) {
             subBytes(state);
             shiftRows(state);
             mixColumns(state);
             addRoundKey(state, &words[r*NUM_COL]);
-            // addRoundKey(state);
         }
 
         subBytes(state);
         shiftRows(state);
         addRoundKey(state, &words[Nr*NUM_COL]);
-        // addRoundKey(state);
 
         state_array++;
     }
 
     printf("*****FINISHED EXECUTING encrypt()*****\n");
 }
-void decrypt(E_KEYSIZE keysize, State** state_array, KeySchedule words) {
+void decrypt(E_KEYSIZE keysize, char* inputfile, KeySchedule words) {
     printf("*****EXECUTING decrypt()*****\n");
 
+    //Pad file
     const int Nr = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
     while (state_array && *state_array) {
         State* state = *state_array;
 
         addRoundKey(state, &words[Nr*NUM_COL]);
-        // addRoundKey(state);
 
         for (int r=Nr-1; r>0; r--) {
             invShiftRows(state);
             invSubBytes(state);
             addRoundKey(state, &words[r*NUM_COL]);
-            // addRoundKey(state);
             invMixColumns(state);
         }
 
         invShiftRows(state);
         invSubBytes(state);
         addRoundKey(state, &words[0]);
-        // addRoundKey(state);
 
         state_array++;
     }
 
+    if (ftruncate(fileno(fp), new_length) != 0)
+
     printf("*****FINISHED EXECUTING decrypt()*****\n");
 }
-
 
 #endif

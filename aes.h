@@ -69,7 +69,7 @@ void invSubBytes(State*);
 void invShiftRows(State*);
 void invMixColumns(State*);
 
-void encrypt(E_KEYSIZE, State**, KeySchedule);
-void decrypt(E_KEYSIZE, State**, KeySchedule);
+void encrypt(E_KEYSIZE, char*, KeySchedule);
+void decrypt(E_KEYSIZE, char*, KeySchedule);
 
 #endif
