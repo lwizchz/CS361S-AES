@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
     size_t state_bytes;
     State** state_array = readStates(opt.inputfile, &state_bytes);
     if (opt.is_verbose) {
-        printStates(state_array);
+        printStates(state_array, state_bytes);
     }
 
     KeySchedule schedule = generateKeySchedule(opt.keyfile, opt.keysize);
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     }
 
     if (opt.is_verbose) {
-        printStates(state_array);
+        printStates(state_array, state_bytes);
     }
     writeStates(opt.outputfile, state_array, state_bytes);
 

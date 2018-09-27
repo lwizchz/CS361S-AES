@@ -179,7 +179,7 @@ State** readStates(const char* filename, size_t* bytes_read) {
     size_t file_size_bytes = findSize(filename);
     *bytes_read = file_size_bytes;
     // determine how many state arrays are needed
-    int arrays_needed = floor((double) file_size_bytes / BLOCK_SIZE) + 1;
+    int arrays_needed = ceil((double) file_size_bytes / BLOCK_SIZE);
 
     State** state_array = malloc(sizeof(State*) * (arrays_needed + 1));
     state_array[arrays_needed] = NULL; // Set sentinel value
@@ -230,16 +230,22 @@ long int findSize(const char* file_name) {
 
     return res;
 }
-void printStates(State** state_array) {
+void printStates(State** state_array, size_t total_bytes) {
+    size_t blocks = 0;
     while (state_array && *state_array) {
         for (int r = 0; r < 4; r++) {
             for (int c = 0; c < NUM_COL; c++) {
-                printf("%02x ", (*state_array)->byte[r][c]);
+                if (blocks*BLOCK_SIZE + r+4*c >= total_bytes) {
+                    printf("xx ");
+                } else {
+                    printf("%02x ", (*state_array)->byte[r][c]);
+                }
             }
             printf("\n");
         }
         printf("\n");
         state_array++;
+        blocks++;
     }
     printf("---\n\n");
 }
@@ -579,7 +585,7 @@ void invMixColumns(State* state) {
 State** encrypt(E_KEYSIZE keysize, State** state_array, size_t* state_bytes, KeySchedule words) {
     // Add padding
     int rem = *state_bytes % BLOCK_SIZE;
-    int arrays_needed = floor((double) *state_bytes / BLOCK_SIZE) + 1;
+    int arrays_needed = ceil((double) *state_bytes / BLOCK_SIZE);
     if (rem == 0) {
         // Add empty block
         state_array = realloc(state_array, sizeof(State*) * (arrays_needed + 2));

@@ -43,7 +43,7 @@ Options handleArgs(int, char**);
 
 State** readStates(const char*, size_t*);
 long int findSize(const char*);
-void printStates(State**);
+void printStates(State**, size_t);
 
 
 size_t writeStates(const char*, State**, size_t);
