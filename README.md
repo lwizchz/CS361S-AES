@@ -3,6 +3,9 @@
 # Name 2: Will Kuglen
 # Name 3: Luke Montalvo
 
+Note: a GUI is provided in aes.py but the commandline backend must be generated
+via `make` before use.
+
 AES Implementation:
 
 - typedef Struct State: contains only a 4x4 char array. It is intended to hold
