@@ -53,18 +53,16 @@ void freeStates(State**);
 void subBytes(State*);
 void shiftRows(State*);
 void mixColumns(State*);
-void addRoundKey(State* state, Word* partialSchedule);
+void addRoundKey(State* state, Word*);
 
-KeySchedule generateKeySchedule(const char* keyfile, E_KEYSIZE keysize);
-KeySchedule keyExpansion(Key rawKey, E_KEYSIZE keysize);
-void copyWord(Word* to, const Word* from);
-Word xorWord(Word* left, Word* right);
-Word* rotWord(Word* word);
-Word* subWord(Word* word);
-Word rcon(int i);
-Key readKey(const char* filename, E_KEYSIZE keysize);
-//void rotWord(State*);
-//void subWord(State*);
+KeySchedule generateKeySchedule(const char*, E_KEYSIZE);
+KeySchedule keyExpansion(Key, E_KEYSIZE);
+void copyWord(Word*, const Word*);
+Word xorWord(Word*, Word*);
+Word* rotWord(Word*);
+Word* subWord(Word*);
+Word rcon(int);
+Key readKey(const char*, E_KEYSIZE);
 
 void invSubBytes(State*);
 void invShiftRows(State*);
