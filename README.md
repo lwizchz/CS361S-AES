@@ -3,10 +3,32 @@
 ### Name 2: Will Kuglen
 ### Name 3: Luke Montalvo
 
-Note: a GUI is provided in aes.py but the commandline backend must be generated
-via `make` before use.
+Contents:
+- [Build and Run](#build-and-run)
+  - [Extra Credit GUI](#extra-credit-gui)
+- [AES Implementation](#aes-implementation)
 
-AES Implementation:
+## Build and Run
+To compile and build the project, use `make` in the main directory.
+
+To run the project:
+```bash
+./aes --keysize $KEYSIZE --keyfile $KEYFILE --inputfile $INPUTFILE --outputfile $OUTFILENAME --mode $MODE
+```
+
+To test the implementation with random keys and random files of various lengths
+in keysizes of 128 and 256, run the `randTest.sh` script with `./randTest.sh`.
+
+### Extra Credit GUI
+A GUI is provided in `aes.py`. Note that the commandline backend must be generated
+via `make` before use.
+To make and run the GUI:
+```bash
+make
+python3 aes.py
+```
+
+## AES Implementation:
 
 - `typedef Struct State`: contains only a 4x4 char array. It is intended to hold
 bytes from the inputfile, and the intermediary data during the algorithm's
