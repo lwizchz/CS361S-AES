@@ -1,10 +1,10 @@
 #!/bin/bash
 
 keysize="256"
-key="tests/key4"
-plainfile="tests/plain4.jpg"
-cipherfile="tests/cipher4"
-decryptfile="tests/decrypted4.jpg"
+key="tests/key5"
+plainfile="tests/random5"
+cipherfile="tests/cipher5"
+decryptfile="tests/decrypted5"
 
 cmd_encrypt="./aes --verbose --keysize $keysize --mode encrypt --keyfile $key --inputfile $plainfile --outputfile $cipherfile"
 cmd_decrypt="./aes --verbose --keysize $keysize --mode decrypt --keyfile $key --inputfile $cipherfile --outputfile $decryptfile"

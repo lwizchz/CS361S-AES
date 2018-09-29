@@ -9,6 +9,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 #include "aes.h"
 
@@ -187,6 +188,7 @@ State** readStates(const char* filename, size_t* bytes_read) {
     FILE* fptr = fopen(filename, "rb");
 
     int rem = file_size_bytes % BLOCK_SIZE;
+    int failed_reads = 0;
 
     for (int a = 0; a < arrays_needed; a++) {
         State* current_state = malloc(sizeof(State));
@@ -194,13 +196,12 @@ State** readStates(const char* filename, size_t* bytes_read) {
 
         for (int c = 0; c < NUM_COL; c++) {
             for (int r = 0; r < 4; r++) {
-                fread(&current_state->byte[r][c], sizeof(char), 1, fptr);
+                if (fread(&current_state->byte[r][c], sizeof(char), 1, fptr) == 0) {
+                    failed_reads++;
+                }
 
-                if (a == arrays_needed - 1) {
-                    if (r + 4*c >= BLOCK_SIZE - rem) {
-                        fclose(fptr);
-                        return state_array;
-                    }
+                if (failed_reads > BLOCK_SIZE) {
+                    exitError("Failed to read file\n");
                 }
             }
         }
@@ -523,7 +524,7 @@ Key readKey(const char* filename, E_KEYSIZE keysize) {
             fread(&key[i].byte[c][0], sizeof(char), 1, fptr);
         }
     }
-    
+
 
     fclose(fptr);
 
@@ -601,7 +602,7 @@ State** encrypt(E_KEYSIZE keysize, State** state_array, size_t* state_bytes, Key
     } else {
         for (int c = 0; c < NUM_COL; c++) {
             for (int r = 0; r < 4; r++) {
-                if (r + 4*c >= BLOCK_SIZE - rem) {
+                if (r + 4*c >= rem) {
                     state_array[arrays_needed-1]->byte[r][c] = 0;
                 }
             }

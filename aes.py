@@ -4,6 +4,7 @@ import tkinter as tk
 import tkinter.filedialog as tkfile
 import tkinter.messagebox as tkmsg
 import subprocess
+import os
 
 KEY_BYTES_128 = 32
 KEY_BYTES_256 = 64
@@ -12,6 +13,7 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
 
+        # Initialize variables that can be set by the GUI
         self.keysize = tk.StringVar()
         self.keysize.set("128")
         self.mode = tk.StringVar()
@@ -20,51 +22,63 @@ class Application(tk.Frame):
         self.inputfile = tk.StringVar()
         self.outputfile = tk.StringVar()
 
+        # Create the GUI
         self.pack()
         self.create_widgets()
 
         self.master.title("AES")
         self.master.resizable(False, False)
 
+        # Start automatically processing typed input
         self.process_update()
     def create_widgets(self):
+        # Create the keysize widgets
         self.keysize_frame = tk.Frame(self)
         keysize_label = tk.Label(self.keysize_frame, text="Keysize:")
         keysize_label.pack(side="left")
-        keysize_choice_128 = tk.Radiobutton(self.keysize_frame, text="128bit", variable=self.keysize, value="128")
+        keysize_choice_128 = tk.Radiobutton(self.keysize_frame, text="128bit",
+                                            variable=self.keysize, value="128")
         keysize_choice_128.pack(side="left")
-        keysize_choice_256 = tk.Radiobutton(self.keysize_frame, text="256bit", variable=self.keysize, value="256")
+        keysize_choice_256 = tk.Radiobutton(self.keysize_frame, text="256bit",
+                                            variable=self.keysize, value="256")
         keysize_choice_256.pack(side="left")
         self.keysize_frame.pack()
 
+        # Create the mode widgets
         self.mode_frame = tk.Frame(self)
         mode_label = tk.Label(self.mode_frame, text="Mode:")
         mode_label.pack(side="left")
-        mode_choice_encrypt = tk.Radiobutton(self.mode_frame, text="encrypt", variable=self.mode, value="encrypt")
+        mode_choice_encrypt = tk.Radiobutton(self.mode_frame, text="encrypt",
+                                            variable=self.mode, value="encrypt")
         mode_choice_encrypt.pack(side="left")
-        mode_choice_decrypt = tk.Radiobutton(self.mode_frame, text="decrypt", variable=self.mode, value="decrypt")
+        mode_choice_decrypt = tk.Radiobutton(self.mode_frame, text="decrypt",
+                                            variable=self.mode, value="decrypt")
         mode_choice_decrypt.pack(side="left")
         self.mode_frame.pack()
 
+        # Create the keyfile widgets
         self.keyfile_frame = tk.Frame(self)
         keyfile_label = tk.Label(self.keyfile_frame, text="Keyfile:")
         keyfile_label.pack(side="left")
-        keyfile_button = tk.Button(self.keyfile_frame, text="Choose file", command=self.choose_keyfile)
-        keyfile_button.pack(side="left")
+        self.keyfile_button = tk.Button(self.keyfile_frame, text="Choose file",
+                                        command=self.choose_keyfile)
+        self.keyfile_button.pack(side="left")
         keyfile_label_or = tk.Label(self.keyfile_frame, text="or hex:")
         keyfile_label_or.pack(side="left")
         self.keyfile_input = tk.Text(self.keyfile_frame, height=1, width=32)
         self.keyfile_input.pack(side="left")
         self.keyfile_frame.pack()
 
+        # Create the i/o widgets
         self.io_frame = tk.Frame(self)
 
         self.input_frame = tk.Frame(self.io_frame)
         input_top_frame = tk.Frame(self.input_frame)
         input_label = tk.Label(input_top_frame, text="Input:")
         input_label.pack(side="left")
-        input_button = tk.Button(input_top_frame, text="Choose file", command=self.choose_inputfile)
-        input_button.pack(side="left")
+        self.input_button = tk.Button(input_top_frame, text="Choose file",
+                                      command=self.choose_inputfile)
+        self.input_button.pack(side="left")
         input_label_or = tk.Label(input_top_frame, text="or type:")
         input_label_or.pack(side="left")
         input_top_frame.pack(side="top")
@@ -76,8 +90,9 @@ class Application(tk.Frame):
         output_top_frame = tk.Frame(self.output_frame)
         output_label = tk.Label(output_top_frame, text="Output:")
         output_label.pack(side="left")
-        output_button = tk.Button(output_top_frame, text="Choose file", command=self.choose_outputfile)
-        output_button.pack(side="left")
+        self.output_button = tk.Button(output_top_frame, text="Choose file",
+                                       command=self.choose_outputfile)
+        self.output_button.pack(side="left")
         output_label_or = tk.Label(output_top_frame, text="as hex:")
         output_label_or.pack(side="left")
         output_top_frame.pack(side="top")
@@ -87,8 +102,10 @@ class Application(tk.Frame):
 
         self.io_frame.pack()
 
+        # Create the process button
         self.process_frame = tk.Frame(self)
-        process_button = tk.Button(self.process_frame, text="Process", command=self.process)
+        process_button = tk.Button(self.process_frame, text="Process",
+                                   command=self.process)
         process_button.pack()
         self.process_frame.pack()
 
@@ -97,17 +114,21 @@ class Application(tk.Frame):
         if f:
             self.keyfile_input.delete("1.0", tk.END)
             self.keyfile.set("@"+f)
+            self.keyfile_button.configure(text=os.path.basename(f))
     def choose_inputfile(self):
         f = tkfile.askopenfilename()
         if f:
             self.input_input.delete("1.0", tk.END)
             self.inputfile.set("@"+f)
+            self.input_button.configure(text=os.path.basename(f))
     def choose_outputfile(self):
-        f = tkfile.askopenfilename()
+        f = tkfile.asksaveasfilename()
         if f:
             self.output_input.delete("1.0", tk.END)
             self.outputfile.set("@"+f)
+            self.output_button.configure(text=os.path.basename(f))
     def process(self):
+        # Get the keyfile and inputfile from user input
         kfi = self.keyfile_input.get("1.0", "end-1c")
         if kfi and self.keyfile.get() != kfi:
             self.keyfile.set(kfi)
@@ -115,6 +136,7 @@ class Application(tk.Frame):
         if ifi and self.inputfile.get() != ifi:
             self.inputfile.set(ifi)
 
+        # Get the keyfile
         keyfile = self.keyfile.get()
         if keyfile and keyfile[0] == '@':
             keyfile = keyfile[1:]
@@ -123,6 +145,7 @@ class Application(tk.Frame):
             keyfile = "/tmp/aes.keyfile"
             with open(keyfile, "wb") as f:
                 f.write(bytes.fromhex(kfi))
+        # Get the inputfile
         inputfile = self.inputfile.get()
         if inputfile and inputfile[0] == '@':
             inputfile = inputfile[1:]
@@ -134,25 +157,39 @@ class Application(tk.Frame):
                     f.write(ifi.encode("utf8"))
                 else:
                     f.write(bytes.fromhex(ifi))
+        # Get the outputfile
         outputfile = self.outputfile.get()
         if outputfile and outputfile[0] == '@':
-            outputfile[0] == outputfile[1:]
+            outputfile = outputfile[1:]
         else:
             outputfile = "/tmp/aes.outputfile"
 
+        # Execute the command
         if keyfile and inputfile and outputfile:
-            cmd = ["./aes", "--keysize", self.keysize.get(), "--mode", self.mode.get(), "--keyfile", keyfile, "--inputfile", inputfile, "--outputfile", outputfile]
+            cmd = [
+                "./aes",
+                "--keysize", self.keysize.get(),
+                "--mode", self.mode.get(),
+                "--keyfile", keyfile,
+                "--inputfile", inputfile,
+                "--outputfile", outputfile
+            ]
             print(" ".join(cmd))
 
             try:
                 subprocess.run(cmd, check=True)
             except FileNotFoundError as e:
                 print(e)
-                tkmsg.showwarning("AES", "Failed to find ./aes, make sure it's been compiled with `make`")
+                tkmsg.showwarning("AES",
+                    "Failed to find ./aes, make sure it's been compiled with "
+                    "`make`"
+                )
                 return
             except subprocess.CalledProcessError as e:
                 print(e)
-                tkmsg.showwarning("AES", "Failed to run ./aes, see the console for more info")
+                tkmsg.showwarning("AES",
+                    "Failed to run ./aes, see the console for more info"
+                )
                 return
 
             with open(outputfile, "rb") as f:
@@ -165,8 +202,10 @@ class Application(tk.Frame):
                         self.output_input.insert(tk.END, b.decode("utf8"))
                     except UnicodeDecodeError as e:
                         print(e)
-                        print(b)
-                        tkmsg.showwarning("AES", "Failed to decode: {}".format(b))
+                        tkmsg.showwarning("AES",
+                            "Decrypt successful but failed to decode UTF8 (this"
+                            "is normal for binary files)"
+                        )
         else:
             msg = "Invalid argument"
             if not keyfile:
@@ -177,6 +216,7 @@ class Application(tk.Frame):
                 msg = "Invalid output file"
             tkmsg.showwarning("AES", msg)
     def process_update(self):
+        # Automatically process after 500ms if the user has changed their input
         should_process = False
 
         kfi = self.keyfile_input.get("1.0", "end-1c")
