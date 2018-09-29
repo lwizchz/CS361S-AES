@@ -3,13 +3,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include <sys/stat.h>
 
 #include "aes.h"
 
@@ -94,7 +92,7 @@ Options handleArgs(int argc, char** argv) {
     Options opt = {
         KEYSIZE_128,
         MODE_ENCRYPT,
-        false,
+        0,
         NULL, NULL, NULL
     };
 
@@ -155,7 +153,7 @@ Options handleArgs(int argc, char** argv) {
                 break;
             }
             case 'v': {
-                opt.is_verbose = true;
+                opt.is_verbose = 1;
                 break;
             }
             default: {}
