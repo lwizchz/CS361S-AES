@@ -87,8 +87,6 @@ void exitError(const char* str) {
     exit(1);
 }
 Options handleArgs(int argc, char** argv) {
-    testSBox();
-
     Options opt = {
         KEYSIZE_128,
         MODE_ENCRYPT,
@@ -173,6 +171,26 @@ Options handleArgs(int argc, char** argv) {
     return opt;
 }
 
+//Function findSize() taken from https://www.geeksforgeeks.org/c-program-find-size-file/
+long int findSize(const char* file_name) {
+    // opening the file in read mode
+    FILE* fp = fopen(file_name, "rb");
+
+    // checking if the file exist or not
+    if (fp == NULL) {
+        exitError("File Not Found!\n");
+    }
+
+    fseek(fp, 0L, SEEK_END);
+
+    // calculating the size of the file
+    long int res = ftell(fp);
+
+    // closing the file
+    fclose(fp);
+
+    return res;
+}
 State** readStates(const char* filename, size_t* bytes_read) {
     // find size of file and check if it exists
     size_t file_size_bytes = findSize(filename);
@@ -185,9 +203,7 @@ State** readStates(const char* filename, size_t* bytes_read) {
 
     FILE* fptr = fopen(filename, "rb");
 
-    int rem = file_size_bytes % BLOCK_SIZE;
-    int failed_reads = 0;
-
+	int failed_reads = 0;
     for (int a = 0; a < arrays_needed; a++) {
         State* current_state = malloc(sizeof(State));
         state_array[a] = current_state;
@@ -209,26 +225,6 @@ State** readStates(const char* filename, size_t* bytes_read) {
 
     return state_array;
 }
-//Function findSize() taken from https://www.geeksforgeeks.org/c-program-find-size-file/
-long int findSize(const char* file_name) {
-    // opening the file in read mode
-    FILE* fp = fopen(file_name, "rb");
-
-    // checking if the file exist or not
-    if (fp == NULL) {
-        exitError("File Not Found!\n");
-    }
-
-    fseek(fp, 0L, SEEK_END);
-
-    // calculating the size of the file
-    long int res = ftell(fp);
-
-    // closing the file
-    fclose(fp);
-
-    return res;
-}
 void printStates(State** state_array, size_t total_bytes) {
     size_t blocks = 0;
     while (state_array && *state_array) {
@@ -248,7 +244,6 @@ void printStates(State** state_array, size_t total_bytes) {
     }
     printf("---\n\n");
 }
-
 size_t writeStates(const char* filename, State** state_array, size_t total_bytes) {
     FILE* fh = fopen(filename, "wb");
     if (fh == NULL) {
@@ -274,7 +269,6 @@ size_t writeStates(const char* filename, State** state_array, size_t total_bytes
 
     return bytes_written;
 }
-
 void freeStates(State** state_array) {
     for (int i=0; state_array[i]; i++) {
         free(state_array[i]);
@@ -282,11 +276,115 @@ void freeStates(State** state_array) {
     free(state_array);
 }
 
+Key readKey(const char* filename, E_KEYSIZE keysize) {
+    // find size of file and check if it exists
+    FILE* fptr = fopen(filename, "rb");
+    if (fptr == NULL) {
+        exitError("File Not Found!\n");
+    }
+
+    int bytes_needed = (keysize == KEYSIZE_128) ? 16 : 32;
+    int words_needed = bytes_needed/4;
+    Key key = malloc(bytes_needed);
+
+    for (int i = 0; i < words_needed; i++) {
+        for (int c = 0; c < 4; c++) {
+            fread(&key[i].byte[c][0], sizeof(char), 1, fptr);
+        }
+    }
+
+    fclose(fptr);
+
+    return key;
+}
+// assumes memory is setup
+void copyWord(Word* to, const Word* from) {
+    to->byte[0][0] = from->byte[0][0];
+    to->byte[1][0] = from->byte[1][0];
+    to->byte[2][0] = from->byte[2][0];
+    to->byte[3][0] = from->byte[3][0];
+}
+
+Word xorWord(Word* left, Word* right) {
+    Word a;
+    a.byte[0][0] = left->byte[0][0] ^ right->byte[0][0];
+    a.byte[1][0] = left->byte[1][0] ^ right->byte[1][0];
+    a.byte[2][0] = left->byte[2][0] ^ right->byte[2][0];
+    a.byte[3][0] = left->byte[3][0] ^ right->byte[3][0];
+    return a;
+}
+// Returns the input {a,b,c,d -> b,c,d,a}
+Word* rotWord(Word* word) {
+    unsigned char temp = word->byte[0][0];
+    word->byte[0][0] = word->byte[1][0];
+    word->byte[1][0] = word->byte[2][0];
+    word->byte[2][0] = word->byte[3][0];
+    word->byte[3][0] = temp;
+    return word;
+}
+Word* subWord(Word* word) {
+    int c = 0;
+    for (int r = 0; r < 4; r++) {
+        int sbox_col_idx = word->byte[r][c] & 0x0f;
+        int sbox_row_idx = (word->byte[r][c] & 0xf0) >> 4;
+        word->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
+    }
+    return word;
+}
+Word rcon(int i) {
+    assert(i != 0);
+    assert(!(i > 10));
+    unsigned char Rcon[10] = {
+    //  1       2       3       4       5       6       7       8       9       10
+        0x01,   0x02,   0x04,   0x08,   0x10,   0x20,   0x40,   0x80,   0x1b,   0x36
+    };
+    Word w = {0};
+    w.byte[0][0] = Rcon[i-1];
+    return w;
+}
+// Generate Key schedule
+KeySchedule generateKeySchedule(const char* keyfile, E_KEYSIZE keysize) {
+    // rawKey = Read in key into an array with (keysize/4) Word s
+    Key rawKey = readKey(keyfile, keysize);
+
+    return keyExpansion(rawKey, keysize);
+}
+// Key Expansion
+KeySchedule keyExpansion(Key rawKey, E_KEYSIZE keysize) {
+    int numWords = (keysize == KEYSIZE_128) ? NUM_WORDS_128 : NUM_WORDS_256;
+    int numRounds = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
+
+    KeySchedule schedule = malloc(sizeof(Word)*NUM_COL*(numRounds+1));
+
+    Word temp;
+    int i = 0;
+    while (i < numWords) {
+        copyWord(&schedule[i], &rawKey[i]);
+        i = i+1;
+    }
+    i = numWords; // should be the case but reassurance
+    while (i < NUM_COL*(numRounds+1)) {
+        copyWord(&temp, &schedule[i-1]);
+        if (i % numWords == 0) {
+            Word rconTmp = rcon(i/numWords);
+            Word xorTmp = xorWord(subWord(rotWord(&temp)), &rconTmp);
+            copyWord(&temp, &xorTmp);
+        } else if (numWords > 6 && i % numWords == 4) {
+            copyWord(&temp, subWord(&temp));
+        }
+        Word xorTmp = xorWord(&schedule[i-numWords], &temp);
+        copyWord(&schedule[i], &xorTmp);
+        i = i+1;
+    }
+
+    return schedule;
+}
+
 void subBytes(State* state) {
     for (int r = 0; r < 4; r++) {
         for (int c = 0; c < NUM_COL; c++) {
-            char sbox_col_idx = (state->byte[r][c] & 0x0f);
-            char sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
+            int sbox_col_idx = state->byte[r][c] & 0x0f;
+            int sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
             state->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
         }
     }
@@ -365,8 +463,6 @@ void mixColumns(State* state) {
         state->byte[3][c] = aes_add(aes_add(aes_mult(0x03, s0), s1), aes_add(s2, aes_mult(0x02, s3)));
     }
 }
-
-
 /*
  * addRoundkey: XOR the state with a 128-bit round key
  * derived from the original key K by a recursive process.
@@ -376,7 +472,6 @@ void mixColumns(State* state) {
  * where n depends on the key size (10 or 14)
  */
 void addRoundKey(State* state, Word* partialSchedule) {
-
     for (int r = 0; r < 4; r++) {
         for (int c = 0; c < NUM_COL; c++) {
             state->byte[r][c] = aes_add(state->byte[r][c], partialSchedule[c].byte[r][0]);
@@ -384,157 +479,11 @@ void addRoundKey(State* state, Word* partialSchedule) {
     }
 }
 
-
-
-// Generate Key schedule
-KeySchedule generateKeySchedule(const char* keyfile, E_KEYSIZE keysize) {
-    // rawKey = Read in key into an array with (keysize/4) Word s
-    Key rawKey = readKey(keyfile, keysize);
-
-    return keyExpansion(rawKey, keysize);
-
-    // Key Expansion
-}
-// Key Expansion
-KeySchedule keyExpansion(Key rawKey, E_KEYSIZE keysize) {
-
-    int numWords = (keysize == KEYSIZE_128) ? NUM_WORDS_128 : NUM_WORDS_256;
-
-    int numRounds = (keysize == KEYSIZE_128) ? NUM_ROUNDS_128 : NUM_ROUNDS_256;
-
-    // schedule = malloc KeySchedule with (numRounds+1) Word s
-    KeySchedule schedule = (Word *)malloc(sizeof(Word)*NUM_COL*(numRounds+1));
-
-    Word temp;
-    int i = 0;
-    while (i < numWords) {
-        copyWord(&schedule[i], &rawKey[i]);
-        i = i+1;
-    }
-    i = numWords; // should be the case but reassurance
-    while (i < NUM_COL*(numRounds+1)) {
-        copyWord(&temp, &schedule[i-1]);
-        if (i % numWords == 0) {
-            Word rconTmp = rcon(i/numWords);
-            Word xorTmp = xorWord(subWord(rotWord(&temp)), &rconTmp);
-            copyWord(&temp, &xorTmp);
-        } else if (numWords > 6 && i % numWords == 4) {
-            copyWord(&temp, subWord(&temp));
-        }
-        Word xorTmp = xorWord(&schedule[i-numWords], &temp);
-        copyWord(&schedule[i], &xorTmp);
-        i = i+1;
-    }
-
-    return schedule;
-}
-
-// assumes memory is setup
-void copyWord(Word* to, const Word* from) {
-    to->byte[0][0] = from->byte[0][0];
-    to->byte[1][0] = from->byte[1][0];
-    to->byte[2][0] = from->byte[2][0];
-    to->byte[3][0] = from->byte[3][0];
-}
-
-Word xorWord(Word* left, Word* right) {
-    Word a;
-    a.byte[0][0] = left->byte[0][0] ^ right->byte[0][0];
-    a.byte[1][0] = left->byte[1][0] ^ right->byte[1][0];
-    a.byte[2][0] = left->byte[2][0] ^ right->byte[2][0];
-    a.byte[3][0] = left->byte[3][0] ^ right->byte[3][0];
-    return a;
-}
-
-/*
-Nk = key length (4 or 8)
-Nb = Block Size  (4)
-Nr = Num Rounds (10 or 14)
-KeyExpansion(byte key[4*Nk], word w[Nb*(Nr+1)], Nk) begin
-    word temp
-    i=0
-    while (i < Nk)
-        w[i] = word(key[4*i], key[4*i+1], key[4*i+2], key[4*i+3])
-        i = i+1
-    end while
-    i = Nk
-    while (i < Nb * (Nr+1)]
-        temp = w[i-1]
-        if (i mod Nk = 0)
-            temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
-        else if (Nk > 6 and i mod Nk = 4)
-             temp = SubWord(temp)
-        end if
-        w[i] = w[i-Nk] xor temp
-        i=i+1
-    end while
-end
-*/
-
-//void rotWord(Word* word) {a,b,c,d -> b,c,d,a}
-Word* rotWord(Word* word) {
-    unsigned char temp = word->byte[0][0];
-    word->byte[0][0] = word->byte[1][0];
-    word->byte[1][0] = word->byte[2][0];
-    word->byte[2][0] = word->byte[3][0];
-    word->byte[3][0] = temp;
-    return word;
-}
-
-
-//void subWord(Word* word) {}
-Word* subWord(Word* word) {
-    int c = 0;
-    for (int r = 0; r < 4; r++) {
-        char sbox_col_idx = (word->byte[r][c] & 0x0f);
-        char sbox_row_idx = (word->byte[r][c] & 0xf0) >> 4;
-        word->byte[r][c] = aes_sbox[sbox_row_idx][sbox_col_idx];
-    }
-    return word;
-}
-
-Word rcon(int i) {
-    assert(i != 0);
-    assert(!(i > 10));
-    unsigned char Rcon[10] = {
-    //  1       2       3       4       5       6       7       8       9       10
-        0x01,   0x02,   0x04,   0x08,   0x10,   0x20,   0x40,   0x80,   0x1b,   0x36
-    };
-    Word w = {0};
-    w.byte[0][0] = Rcon[i-1];
-    return w;
-}
-
-
-Key readKey(const char* filename, E_KEYSIZE keysize) {
-    // find size of file and check if it exists
-    FILE* fptr = fopen(filename, "rb");
-    if (fptr == NULL) {
-        exitError("File Not Found!\n");
-    }
-
-    int bytes_needed = (keysize == KEYSIZE_128) ? 16 : 32;
-    int words_needed = bytes_needed/4;
-    Key key = malloc(bytes_needed);
-
-    for (int i = 0; i < words_needed; i++) {
-        for (int c = 0; c < 4; c++) {
-            fread(&key[i].byte[c][0], sizeof(char), 1, fptr);
-        }
-    }
-
-
-    fclose(fptr);
-
-    return key;
-}
-
-
 void invSubBytes(State* state) {
     for (int r = 0; r < 4; r++) {
         for (int c = 0; c < NUM_COL; c++) {
-            char inv_sbox_col_idx = (state->byte[r][c] & 0x0f);
-            char inv_sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
+            int inv_sbox_col_idx = state->byte[r][c] & 0x0f;
+            int inv_sbox_row_idx = (state->byte[r][c] & 0xf0) >> 4;
             state->byte[r][c] = aes_inv_sbox[inv_sbox_row_idx][inv_sbox_col_idx];
         }
     }

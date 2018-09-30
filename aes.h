@@ -41,28 +41,20 @@ typedef Word* KeySchedule;
 
 Options handleArgs(int, char**);
 
-State** readStates(const char*, size_t*);
 long int findSize(const char*);
+State** readStates(const char*, size_t*);
 void printStates(State**, size_t);
-
-
 size_t writeStates(const char*, State**, size_t);
-
 void freeStates(State**);
+
+Key readKey(const char*, E_KEYSIZE);
+KeySchedule generateKeySchedule(const char*, E_KEYSIZE);
+KeySchedule keyExpansion(Key, E_KEYSIZE);
 
 void subBytes(State*);
 void shiftRows(State*);
 void mixColumns(State*);
 void addRoundKey(State* state, Word*);
-
-KeySchedule generateKeySchedule(const char*, E_KEYSIZE);
-KeySchedule keyExpansion(Key, E_KEYSIZE);
-void copyWord(Word*, const Word*);
-Word xorWord(Word*, Word*);
-Word* rotWord(Word*);
-Word* subWord(Word*);
-Word rcon(int);
-Key readKey(const char*, E_KEYSIZE);
 
 void invSubBytes(State*);
 void invShiftRows(State*);
