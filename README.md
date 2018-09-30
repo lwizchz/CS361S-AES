@@ -20,7 +20,7 @@ To test the implementation with random keys and random files of various lengths
 in keysizes of 128 and 256, run the `randTest.sh` script with `./randTest.sh`.
 
 ### Extra Credit GUI
-A GUI is provided in `aes.py`. Note that the commandline backend must be generated
+A GUI is provided in `aes.py` which depends on python3, tkinter, and tk/tcl. Note that the commandline backend must be generated
 via `make` before use.
 To make and run the GUI:
 ```bash
